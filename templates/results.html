@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Search Results - News-Scan-AI{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <!-- Header -->
+            <div class="text-center mb-5">
+                <h1 class="display-5 fw-bold">
+                    <i class="fas fa-search-plus"></i> Search Results
+                </h1>
+            </div>
+
+            <!-- Uploaded Image -->
+            <div class="card shadow mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-image"></i> Searched Image
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <img src="{{ url_for('uploaded_file', filename=uploaded_image) }}" alt="Uploaded Image" class="img-fluid rounded shadow" style="max-height: 300px;">
+                </div>
+            </div>
+
+            <!-- Results Summary -->
+            <div class="card shadow mb-4">
+                <div class="card-header {% if results.matches_found > 0 %}bg-success{% else %}bg-warning{% endif %} text-white">
+                    <h5 class="mb-0">
+                        {% if results.matches_found > 0 %}
+                            <i class="fas fa-check-circle"></i> Matches Found
+                        {% else %}
+                            <i class="fas fa-exclamation-triangle"></i> No Matches Found
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if results.matches_found > 0 %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-chart-line"></i> Summary</h6>
+                                <ul class="list-unstyled">
+                                    <li><strong>Total Matches:</strong> {{ results.matches_found }}</li>
+                                    <li><strong>Time Ranges:</strong> {{ results.time_ranges|length }}</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-clock"></i> Time Ranges</h6>
+                                {% for range in results.time_ranges %}
+                                <div class="badge bg-primary me-2 mb-2">
+                                    {{ range.start_formatted }} - {{ range.end_formatted }}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center">
+                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                            <h5>No matches found</h5>
+                            <p class="text-muted mb-4">
+                                The uploaded image doesn't appear to match any frames in the selected video.
+                            </p>
+                            <div class="row justify-content-center">
+                                <div class="col-md-6">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-lightbulb"></i>
+                                        <strong>Tips:</strong>
+                                        <ul class="mb-0 mt-2">
+                                            <li>Try lowering the similarity threshold</li>
+                                            <li>Ensure the image is from this specific video</li>
+                                            <li>Check if the video has been processed completely</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if results.matches_found > 0 %}
+            <!-- Detailed Results -->
+            <div class="card shadow mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list"></i> Detailed Matches
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Similarity Score</th>
+                                    <th>Frame Preview</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for match in results.detailed_matches %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-primary">{{ "%.2f"|format(match.timestamp) }}s</span>
+                                        <br>
+                                        <small class="text-muted">{{ "%.2f"|format(match.timestamp / 60) }} min</small>
+                                    </td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar" role="progressbar" 
+                                                 style="width: {{ (match.similarity_score * 100)|round }}%"
+                                                 aria-valuenow="{{ (match.similarity_score * 100)|round }}" 
+                                                 aria-valuemin="0" aria-valuemax="100">
+                                                {{ "%.1f"|format(match.similarity_score * 100) }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% set frame_path = match.frame_path.replace('\\', '/') %}
+                                        <img src="{{ url_for('frame_file', filename=frame_path.split('frames/')[1]) }}" 
+                                             alt="Frame" class="img-thumbnail" style="max-width: 100px; max-height: 60px;">
+                                    </td>
+                                    <td>
+                                        <small>
+                                            <strong>Frame:</strong> {{ match.frame_number }}<br>
+                                            <strong>Hist:</strong> {{ "%.2f"|format(match.hist_similarity) }}<br>
+                                            <strong>Template:</strong> {{ "%.2f"|format(match.template_similarity) }}<br>
+                                            <strong>Struct:</strong> {{ "%.2f"|format(match.struct_similarity) }}
+                                        </small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Time Ranges Visualization -->
+            <div class="card shadow">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar"></i> Time Ranges Visualization
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for range in results.time_ranges %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span><strong>Range {{ loop.index }}:</strong></span>
+                            <span class="badge bg-info">
+                                {{ range.start_formatted }} - {{ range.end_formatted }}
+                                ({{ "%.1f"|format(range.duration) }}s)
+                            </span>
+                        </div>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar bg-success" role="progressbar" 
+                                 style="margin-left: {{ (range.start_time / 600 * 100)|round }}%; width: {{ (range.duration / 600 * 100)|max(2)|round }}%"
+                                 title="Duration: {{ "%.1f"|format(range.duration) }}s">
+                                {{ range.start_formatted }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i> 
+                        Visualization assumes max 10-minute video. Adjust scale based on actual video length.
+                    </small>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Action Buttons -->
+            <div class="text-center mt-4">
+                <a href="{{ url_for('search') }}" class="btn btn-primary me-3">
+                    <i class="fas fa-search"></i> New Search
+                </a>
+                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-home"></i> Back to Home
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Add tooltips to progress bars
+    $('[title]').tooltip();
+    
+    // Smooth scroll to results
+    $('html, body').animate({
+        scrollTop: 0
+    }, 500);
+});
+</script>
+{% endblock %}

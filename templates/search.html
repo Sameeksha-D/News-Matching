@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block title %}News-Scan-AI - Search{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="text-center mb-5">
+                <h1 class="display-5 fw-bold">
+                    <i class="fas fa-search"></i> Image Search
+                </h1>
+                <p class="lead text-muted">
+                    Upload an image to find matching frames in videos and get precise timestamps.
+                </p>
+            </div>
+
+            <!-- Search Form -->
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-upload"></i> Upload Image to Search
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="searchForm" action="{{ url_for('search') }}" method="post" enctype="multipart/form-data">
+                        <!-- Video Selection -->
+                        <div class="mb-4">
+                            <label for="video_id" class="form-label fw-bold">
+                                <i class="fas fa-video"></i> Select Video to Search In
+                            </label>
+                            <select name="video_id" id="video_id" class="form-select" required>
+                                <option value="">Choose a video...</option>
+                                {% for video in videos %}
+                                <option value="{{ video[0] }}" {% if request.args.get('video_id') == video[0]|string %}selected{% endif %}>
+                                    {{ video[2] }} ({{ "%.1f"|format(video[4] or 0) }}s, {{ video[6] }} frames)
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% if not videos %}
+                            <div class="alert alert-warning mt-2">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                No videos available. Please <a href="{{ url_for('index') }}" class="alert-link">upload a video</a> first.
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Image Upload -->
+                        <div class="mb-4">
+                            <label for="imageFile" class="form-label fw-bold">
+                                <i class="fas fa-image"></i> Upload Image
+                            </label>
+                            <div class="upload-area" id="uploadArea">
+                                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                <h6>Drop image here or click to select</h6>
+                                <p class="text-muted mb-3">Supported formats: JPG, PNG, GIF</p>
+                                <input type="file" name="image" id="imageFile" accept=".jpg,.jpeg,.png,.gif" class="form-control" required>
+                                <div id="imagePreview" class="mt-3" style="display: none;">
+                                    <img id="previewImg" src="" alt="Preview" class="img-fluid rounded" style="max-height: 200px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Search Options -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-cog"></i> Search Options
+                            </label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="threshold" class="form-label">Similarity Threshold</label>
+                                    <select name="threshold" id="threshold" class="form-select">
+                                        <option value="0.2">Low (0.2) - More matches</option>
+                                        <option value="0.3" selected>Medium (0.3) - Recommended</option>
+                                        <option value="0.4">High (0.4) - Precise matches</option>
+                                        <option value="0.5">Very High (0.5) - Exact matches</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="maxResults" class="form-label">Max Results</label>
+                                    <select name="maxResults" id="maxResults" class="form-select">
+                                        <option value="10" selected>10</option>
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary btn-lg" id="searchBtn">
+                                <i class="fas fa-search"></i> Search Video
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Sample Image Demo -->
+            <div class="card shadow mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-lightbulb"></i> Try with Sample Image
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <img src="{{ url_for('static_image', filename='i1.jpg') }}" alt="Sample Image" class="img-fluid rounded">
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-2"><strong>Sample Image Available</strong></p>
+                            <p class="text-muted mb-0">Use this sample image to test the system. It should match frames in the sample video if you've uploaded it.</p>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <button class="btn btn-outline-primary" id="useSampleBtn">
+                                <i class="fas fa-download"></i> Use Sample
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Processing Modal -->
+<div class="modal fade" id="processingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-5">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5>Searching for matches...</h5>
+                <p class="text-muted mb-0">This may take a few moments depending on video length.</p>
+                <div class="progress mt-3">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Image preview functionality
+    $('#imageFile').on('change', function() {
+        const file = this.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                $('#previewImg').attr('src', e.target.result);
+                $('#imagePreview').show();
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Use sample image
+    $('#useSampleBtn').on('click', function() {
+        // Create a link to download the sample image
+        const link = document.createElement('a');
+        link.href = "{{ url_for('static_image', filename='i1.jpg') }}";
+        link.download = 'sample_image.jpg';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        alert('Sample image downloaded! Please select it in the file input above.');
+    });
+
+    // Handle form submission
+    $('#searchForm').on('submit', function(e) {
+        const videoId = $('#video_id').val();
+        const imageFile = $('#imageFile')[0].files[0];
+        
+        if (!videoId) {
+            e.preventDefault();
+            alert('Please select a video to search in.');
+            return;
+        }
+        
+        if (!imageFile) {
+            e.preventDefault();
+            alert('Please select an image to search for.');
+            return;
+        }
+
+        // Show processing modal
+        $('#processingModal').modal('show');
+        
+        // Disable submit button
+        $('#searchBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Searching...');
+    });
+
+    // Drag and drop functionality
+    const uploadArea = $('#uploadArea');
+    const fileInput = $('#imageFile');
+
+    uploadArea.on('dragover', function(e) {
+        e.preventDefault();
+        $(this).addClass('border-primary');
+    });
+
+    uploadArea.on('dragleave', function(e) {
+        e.preventDefault();
+        $(this).removeClass('border-primary');
+    });
+
+    uploadArea.on('drop', function(e) {
+        e.preventDefault();
+        $(this).removeClass('border-primary');
+        
+        const files = e.originalEvent.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput[0].files = files;
+            fileInput.trigger('change');
+        }
+    });
+
+    uploadArea.on('click', function() {
+        fileInput.click();
+    });
+});
+</script>
+{% endblock %}
