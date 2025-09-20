@@ -1,29 +1,18 @@
 {% extends "base.html" %}
 
-{% block title %}Search Results - News-Scan-AI{% endblock %}
+{% block title %}News Scan AI - Results{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="row">
-        <div class="col-lg-8 mx-auto">
-            <!-- Header -->
-            <div class="text-center mb-5">
-                <h1 class="display-5 fw-bold">
-                    <i class="fas fa-search-plus"></i> Search Results
-                </h1>
-            </div>
-
-            <!-- Uploaded Image -->
-            <div class="card shadow mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-image"></i> Searched Image
-                    </h5>
+<div class="container-fluid py-4" style="background-color: #0f0f0f; min-height: 100vh;">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <!-- Back Button -->
+                <div class="mb-3">
+                    <a href="{{ url_for('index') }}" class="btn btn-dark">
+                        <i class="fas fa-arrow-left"></i> Back to Search
+                    </a>
                 </div>
-                <div class="card-body text-center">
-                    <img src="{{ url_for('uploaded_file', filename=uploaded_image) }}" alt="Uploaded Image" class="img-fluid rounded shadow" style="max-height: 300px;">
-                </div>
-            </div>
 
             <!-- Results Summary -->
             <div class="card shadow mb-4">

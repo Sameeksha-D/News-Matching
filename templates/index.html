@@ -1,156 +1,58 @@
 {% extends "base.html" %}
 
-{% block title %}News-Scan-AI - Home{% endblock %}
+{% block title %}News Scan AI{% endblock %}
 
 {% block content %}
-<!-- Hero Section -->
-<section class="hero-section">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-lg-6">
-                <h1 class="display-4 fw-bold mb-4">
-                    <i class="fas fa-shield-alt"></i> News-Scan-AI
-                </h1>
-                <p class="lead mb-4">
-                    Verify news images by finding exactly where they appear in videos. Upload a screenshot and discover the precise timestamp and context in news footage.
-                </p>
-                <div class="d-flex gap-3">
-                    <a href="{{ url_for('search') }}" class="btn btn-primary btn-lg">
-                        <i class="fas fa-search"></i> Start Searching
-                    </a>
-                    <button class="btn btn-outline-light btn-lg" data-bs-toggle="modal" data-bs-target="#uploadModal">
-                        <i class="fas fa-upload"></i> Upload Video
-                    </button>
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <!-- Upload Form -->
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-5">
+                    <form id="searchForm" action="{{ url_for('search') }}" method="post" enctype="multipart/form-data">
+                        <!-- Image Upload Area -->
+                        <div class="upload-area text-center p-5 mb-4" id="uploadArea" style="border: 2px solid #dee2e6; border-radius: 10px; cursor: pointer; transition: all 0.3s ease;">
+                            <div id="uploadPrompt">
+                                <input type="file" name="image" id="imageFile" accept=".jpg,.jpeg,.png,.gif" class="d-none" required>
+                                <button type="button" class="btn btn-primary btn-lg" onclick="document.getElementById('imageFile').click()">
+                                    <i class="fas fa-image"></i> Choose Image
+                                </button>
+                            </div>
+                            <div id="imagePreview" class="d-none">
+                                <img id="previewImg" src="" alt="Preview" class="img-fluid rounded mb-3" style="max-height: 200px;">
+                                <p class="mb-2"><strong>Image selected</strong></p>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="resetUpload()">
+                                    <i class="fas fa-times"></i> Remove
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Search Button -->
+                        <div class="text-center mb-3">
+                            <button type="submit" class="btn btn-primary btn-lg px-5" id="searchBtn">
+                                <i class="fas fa-search"></i> Search Image
+                            </button>
+                        </div>
+
+                    </form>
                 </div>
             </div>
-            <div class="col-lg-6 text-center">
-                <img src="{{ url_for('static_image', filename='i1.jpg') }}" alt="Sample Image" class="img-fluid rounded shadow" style="max-height: 300px;">
-                <p class="mt-2 text-light"><small>Sample image for testing</small></p>
-            </div>
+
         </div>
     </div>
-</section>
+</div>
 
-<!-- Features Section -->
-<section class="py-5">
-    <div class="container">
-        <h2 class="text-center mb-5">How It Works</h2>
-        <div class="row g-4">
-            <div class="col-md-4">
-                <div class="card h-100">
-                    <div class="card-body text-center">
-                        <div class="mb-3">
-                            <i class="fas fa-video fa-3x text-primary"></i>
-                        </div>
-                        <h5 class="card-title">1. Upload Videos</h5>
-                        <p class="card-text">Upload news videos to build your searchable database. We extract frames automatically for comparison.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card h-100">
-                    <div class="card-body text-center">
-                        <div class="mb-3">
-                            <i class="fas fa-image fa-3x text-primary"></i>
-                        </div>
-                        <h5 class="card-title">2. Upload Screenshot</h5>
-                        <p class="card-text">Upload any image or screenshot you want to verify against the video database.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card h-100">
-                    <div class="card-body text-center">
-                        <div class="mb-3">
-                            <i class="fas fa-clock fa-3x text-primary"></i>
-                        </div>
-                        <h5 class="card-title">3. Get Timestamps</h5>
-                        <p class="card-text">Receive precise timestamps showing when and where the image appears in the video.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Video Database Section -->
-<section class="bg-light py-5">
-    <div class="container">
-        <h2 class="text-center mb-5">Video Database</h2>
-        {% if videos %}
-        <div class="row g-4">
-            {% for video in videos %}
-            <div class="col-lg-4 col-md-6">
-                <div class="card">
-                    <div class="card-body">
-                        <h6 class="card-title">
-                            <i class="fas fa-video text-primary"></i>
-                            {{ video[2] }}
-                        </h6>
-                        <p class="card-text">
-                            <small class="text-muted">
-                                <i class="fas fa-clock"></i> Duration: {{ "%.1f"|format(video[4] or 0) }}s<br>
-                                <i class="fas fa-film"></i> FPS: {{ "%.1f"|format(video[5] or 0) }}<br>
-                                <i class="fas fa-images"></i> Frames: {{ video[6] }}
-                                <span id="status-{{ video[0] }}" class="ms-2"></span>
-                            </small>
-                        </p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <small class="text-muted">{{ video[7][:19] }}</small>
-                            <a href="{{ url_for('search') }}?video_id={{ video[0] }}" class="btn btn-sm btn-primary">
-                                <i class="fas fa-search"></i> Search
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="text-center">
-            <div class="mb-4">
-                <i class="fas fa-video fa-4x text-muted"></i>
-            </div>
-            <h4>No videos uploaded yet</h4>
-            <p class="text-muted mb-4">Start by uploading a video to build your searchable database.</p>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
-                <i class="fas fa-upload"></i> Upload Your First Video
-            </button>
-        </div>
-        {% endif %}
-    </div>
-</section>
-
-<!-- Upload Modal -->
-<div class="modal fade" id="uploadModal" tabindex="-1">
-    <div class="modal-dialog">
+<!-- Processing Modal -->
+<div class="modal fade" id="processingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-upload"></i> Upload Video
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-body text-center p-5">
+                <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5 class="mb-2">Analyzing image...</h5>
+                <p class="text-muted mb-0">Analyzing the video for matches...</p>
             </div>
-            <form action="{{ url_for('upload_video') }}" method="post" enctype="multipart/form-data">
-                <div class="modal-body">
-                    <div class="upload-area mb-3">
-                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
-                        <h6>Select Video File</h6>
-                        <p class="text-muted">Supported formats: MP4, AVI, MOV, MKV, WMV</p>
-                        <input type="file" name="video" accept=".mp4,.avi,.mov,.mkv,.wmv" class="form-control" required>
-                    </div>
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i>
-                        <strong>Processing Note:</strong> After upload, frames will be extracted in the background. This may take a few minutes depending on video length.
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-upload"></i> Upload Video
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
@@ -158,27 +60,75 @@
 
 {% block scripts %}
 <script>
-// Check processing status for videos
 $(document).ready(function() {
-    {% for video in videos %}
-    checkVideoStatus({{ video[0] }});
-    {% endfor %}
+    const uploadArea = $('#uploadArea');
+    const fileInput = $('#imageFile');
+    const uploadPrompt = $('#uploadPrompt');
+    const imagePreview = $('#imagePreview');
+    const previewImg = $('#previewImg');
+
+    // File input change
+    fileInput.on('change', function() {
+        const file = this.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImg.attr('src', e.target.result);
+                uploadPrompt.addClass('d-none');
+                imagePreview.removeClass('d-none');
+                uploadArea.css('border-color', '#0d6efd');
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Drag and drop
+    uploadArea.on('dragover', function(e) {
+        e.preventDefault();
+        $(this).css('border-color', '#0d6efd').css('background-color', '#f8f9ff');
+    });
+
+    uploadArea.on('dragleave', function(e) {
+        e.preventDefault();
+        if (!fileInput[0].files.length) {
+            $(this).css('border-color', '#dee2e6').css('background-color', 'transparent');
+        }
+    });
+
+    uploadArea.on('drop', function(e) {
+        e.preventDefault();
+        const files = e.originalEvent.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput[0].files = files;
+            fileInput.trigger('change');
+        }
+    });
+
+    uploadArea.on('click', function() {
+        if (uploadPrompt.is(':visible')) {
+            fileInput.click();
+        }
+    });
+
+    // Form submission
+    $('#searchForm').on('submit', function() {
+        $('#processingModal').modal('show');
+        $('#searchBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Analyzing...');
+    });
 });
 
-function checkVideoStatus(videoId) {
-    $.get('/video_status/' + videoId)
-        .done(function(data) {
-            const statusElement = $('#status-' + videoId);
-            if (data.status === 'processing') {
-                statusElement.html('<span class="badge bg-warning"><i class="fas fa-spinner fa-spin"></i> Processing</span>');
-                // Check again in 5 seconds
-                setTimeout(() => checkVideoStatus(videoId), 5000);
-            } else if (data.status === 'completed') {
-                statusElement.html('<span class="badge bg-success"><i class="fas fa-check"></i> Ready</span>');
-            } else if (data.status === 'error') {
-                statusElement.html('<span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>');
-            }
-        });
+function resetUpload() {
+    $('#imageFile').val('');
+    $('#uploadPrompt').removeClass('d-none');
+    $('#imagePreview').addClass('d-none');
+    $('#uploadArea').css('border-color', '#dee2e6').css('background-color', 'transparent');
+}
+
+function resetVideoUpload() {
+    $('#videoFile').val('');
+    $('#videoUploadPrompt').removeClass('d-none');
+    $('#videoPreview').addClass('d-none');
+    $('#videoUploadArea').css('border-color', '#dee2e6').css('background-color', 'transparent');
 }
 </script>
 {% endblock %}

@@ -24,20 +24,15 @@
                 </div>
                 <div class="card-body">
                     <form id="searchForm" action="{{ url_for('search') }}" method="post" enctype="multipart/form-data">
-                        <!-- Video Selection -->
+                        <!-- Video Selection (single active video only) -->
                         <div class="mb-4">
-                            <label for="video_id" class="form-label fw-bold">
-                                <i class="fas fa-video"></i> Select Video to Search In
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-video"></i> Video to Search In
                             </label>
-                            <select name="video_id" id="video_id" class="form-select" required>
-                                <option value="">Choose a video...</option>
-                                {% for video in videos %}
-                                <option value="{{ video[0] }}" {% if request.args.get('video_id') == video[0]|string %}selected{% endif %}>
-                                    {{ video[2] }} ({{ "%.1f"|format(video[4] or 0) }}s, {{ video[6] }} frames)
-                                </option>
-                                {% endfor %}
-                            </select>
-                            {% if not videos %}
+                            {% if active_video %}
+                            <input type="hidden" name="video_id" id="video_id" value="{{ active_video[0] }}">
+                            <input type="text" class="form-control" value="{{ active_video[2] }} ({{ "%.1f"|format(active_video[4] or 0) }}s, {{ active_video[6] }} frames)" disabled>
+                            {% else %}
                             <div class="alert alert-warning mt-2">
                                 <i class="fas fa-exclamation-triangle"></i>
                                 No videos available. Please <a href="{{ url_for('index') }}" class="alert-link">upload a video</a> first.
@@ -134,7 +129,7 @@
                 <div class="spinner-border text-primary mb-3" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
-                <h5>Searching for matches...</h5>
+                <h5>Analyzing the video for matches...</h5>
                 <p class="text-muted mb-0">This may take a few moments depending on video length.</p>
                 <div class="progress mt-3">
                     <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>

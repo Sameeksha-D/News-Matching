@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Search Results - News Scan AI{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Back Button -->
+            <div class="mb-3">
+                <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back
+                </a>
+            </div>
+
+            {% if results.matches_found > 0 %}
+            <!-- Results Found -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-check-circle"></i> Image Found in Video
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <!-- Video Player -->
+                            <div class="mb-3">
+<video id="resultVideo" controls style="width: 100%; height: 400px; background: #000;" preload="metadata">
+                                    {% if video_file %}
+                                    <source src="{{ url_for('video_file', filename=video_file) }}" type="video/mp4">
+                                    {% else %}
+                                    <source src="{{ url_for('serve_video') }}" type="video/mp4">
+                                    {% endif %}
+                                    Your browser does not support the video tag.
+                                </video>
+                            </div>
+                            <h6>Election Commission Challenges Rahul Gandhi's 'Vote-Theft' Allegations</h6>
+                            <p class="text-muted">India Today • 2 days ago</p>
+                        </div>
+                        <div class="col-md-4">
+                            <!-- Search Info -->
+                            <div class="mb-3">
+                                <h6>Your Search Image</h6>
+                                <img src="{{ url_for('uploaded_file', filename=uploaded_image) }}" 
+                                     alt="Searched Image" class="img-fluid rounded shadow" style="max-height: 150px;">
+                            </div>
+                            
+                            <!-- Timestamps -->
+                            <div class="mb-3">
+                                <h6>Found at timestamps:</h6>
+                                {% for range in results.time_ranges %}
+                                <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+                                    <span>{{ range.start_formatted }} - {{ range.end_formatted }}</span>
+                                    <button class="btn btn-sm btn-primary" onclick="playAt({{ range.start_time }})">
+                                        <i class="fas fa-play"></i> Play
+                                    </button>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                
+                <!-- No Match Found -->
+                <div class="card shadow">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <i class="fas fa-exclamation-triangle"></i> No Video Found
+                        </h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <i class="fas fa-search fa-4x text-muted mb-4"></i>
+<h5 class="mb-3">Image not found in video</h5>
+                        <p class="text-muted mb-4">
+                            We couldn't find this image in any videos. This could mean:
+                        </p>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <i class="fas fa-image fa-2x text-info mb-2"></i>
+                                            <p class="small">Image might be original content</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+                                            <p class="small">Video not yet indexed</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <i class="fas fa-crop fa-2x text-danger mb-2"></i>
+                                            <p class="small">Image might be cropped/edited</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4">
+                                    <img src="{{ url_for('uploaded_file', filename=uploaded_image) }}" 
+                                         alt="Searched Image" class="img-fluid rounded shadow" style="max-height: 200px;">
+                                    <p class="text-muted mt-2 small">Your searched image</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% endif %}
+                
+                <!-- Action Buttons -->
+                <div class="text-center mt-4">
+                    <a href="{{ url_for('index') }}" class="btn btn-primary me-3">
+                        <i class="fas fa-search"></i> Search Another Image
+                    </a>
+                    <button class="btn btn-outline-light" onclick="window.print()">
+                        <i class="fas fa-download"></i> Download Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Function to play video at specific timestamp
+function playAt(seconds) {
+    const video = document.getElementById('resultVideo');
+    if (video) {
+        video.currentTime = seconds;
+        video.play();
+        
+        // Scroll to video
+        video.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Highlight the video player briefly
+        $(video).css('border', '3px solid #007bff');
+        setTimeout(() => {
+            $(video).css('border', 'none');
+        }, 2000);
+    }
+}
+
+$(document).ready(function() {
+    // Auto-play at first timestamp if available
+    {% if results.matches_found > 0 and results.time_ranges %}
+    setTimeout(function() {
+        playAt({{ results.time_ranges[0].start_time }});
+    }, 1000);
+    {% endif %}
+});
+</script>
+{% endblock %}

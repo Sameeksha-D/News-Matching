@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Image → Indian News Video Finder</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 24px; }
+      header { margin-bottom: 16px; }
+      h1 { margin: 0 0 8px; font-size: 20px; }
+      p { margin: 0 0 16px; color: #666; }
+      .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; }
+      .row { display: flex; gap: 16px; flex-wrap: wrap; }
+      .col { flex: 1 1 320px; }
+      .drop { border: 2px dashed #aaa; border-radius: 8px; padding: 24px; text-align: center; cursor: pointer; }
+      .drop.dragover { background: rgba(0,0,0,0.03); }
+      #preview { max-width: 100%; border-radius: 8px; display: none; }
+      button { padding: 10px 16px; border-radius: 6px; border: 1px solid #999; cursor: pointer; }
+      button:disabled { opacity: 0.6; cursor: not-allowed; }
+      .results { margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+      .result { border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
+      .meta { font-size: 12px; color: #666; margin: 6px 0; }
+      iframe { width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 8px; }
+      .error { color: #b00020; margin-top: 8px; white-space: pre-wrap; }
+      .hint { font-size: 12px; color: #888; margin-top: 8px; }
+      code { background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Image → Indian News Video Finder</h1>
+      <p>Upload an image to find YouTube news videos where it appears. This demo runs with mock data until you configure your real API.</p>
+    </header>
+
+    <div class="card">
+      <div class="row">
+        <div class="col">
+          <label for="fileInput" class="drop" id="dropArea">
+            <strong>Drop an image</strong> or click to choose
+            <br/>
+            <span class="hint">Accepted: PNG, JPG, JPEG</span>
+            <input id="fileInput" type="file" accept="image/*" style="display: none;" />
+          </label>
+          <img id="preview" alt="preview" />
+        </div>
+        <div class="col">
+          <button id="searchBtn" disabled>Search in News Videos</button>
+          <div class="hint">Server endpoint: <code>/api/search</code>. In mock mode (MOCK=true) you will see demo results.</div>
+          <div id="error" class="error"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="results" id="results"></div>
+
+    <script>
+      const fileInput = document.getElementById('fileInput');
+      const preview = document.getElementById('preview');
+      const searchBtn = document.getElementById('searchBtn');
+      const resultsDiv = document.getElementById('results');
+      const dropArea = document.getElementById('dropArea');
+      const errorDiv = document.getElementById('error');
+
+      function setError(msg) {
+        errorDiv.textContent = msg || '';
+      }
+
+      function setPreview(file) {
+        if (!file) {
+          preview.style.display = 'none';
+          preview.src = '';
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+          preview.src = reader.result;
+          preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function enableSearch(enabled) {
+        searchBtn.disabled = !enabled;
+      }
+
+      dropArea.addEventListener('click', () => fileInput.click());
+      dropArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropArea.classList.add('dragover');
+      });
+      dropArea.addEventListener('dragleave', () => dropArea.classList.remove('dragover'));
+      dropArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropArea.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) {
+          fileInput.files = e.dataTransfer.files;
+          setPreview(file);
+          enableSearch(true);
+        }
+      });
+
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        setPreview(file);
+        enableSearch(!!file);
+      });
+
+      searchBtn.addEventListener('click', async () => {
+        setError('');
+        const file = fileInput.files[0];
+        if (!file) {
+          setError('Please select an image first.');
+          return;
+        }
+        enableSearch(false);
+        searchBtn.textContent = 'Searching...';
+        resultsDiv.innerHTML = '';
+
+        try {
+          const form = new FormData();
+          form.append('image', file);
+          const resp = await fetch('/api/search', { method: 'POST', body: form });
+          const data = await resp.json();
+          if (!resp.ok) {
+            throw new Error(data.error || 'Request failed');
+          }
+          const results = data.results || [];
+          if (results.length === 0) {
+            resultsDiv.innerHTML = '<div class="hint">No matches found.</div>';
+          } else {
+            resultsDiv.innerHTML = results.map(r => renderResult(r)).join('');
+          }
+        } catch (err) {
+          setError(String(err));
+        } finally {
+          enableSearch(true);
+          searchBtn.textContent = 'Search in News Videos';
+        }
+      });
+
+      function renderResult(r) {
+        const start = r.matchedAtSeconds ?? 0;
+        const vid = r.videoId;
+        const embed = vid ? `https://www.youtube.com/embed/${vid}?start=${start}&autoplay=0` : '';
+        const watchUrl = r.videoUrl || (vid ? `https://www.youtube.com/watch?v=${vid}&t=${start}s` : '#');
+        const hms = r.matchedAtHMS ?? '';
+        const channel = r.channel ? ` • ${r.channel}` : '';
+        const conf = (typeof r.confidence === 'number') ? ` • confidence ${(r.confidence * 100).toFixed(1)}%` : '';
+
+        return `
+          <div class="result">
+            <div><strong>${escapeHtml(r.title || 'Match')}</strong><span class="meta">${channel}${conf}</span></div>
+            ${embed ? `<iframe loading=\"lazy\" src=\"${embed}\" allow=\"accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture;\" allowfullscreen></iframe>` : ''}
+            <div class="meta">Start at ${hms || (start + 's')}</div>
+            <a href="${watchUrl}" target="_blank" rel="noopener noreferrer">Open on YouTube</a>
+          </div>
+        `;
+      }
+
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>" ]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',' ': ' ' }[c]));
+      }
+    </script>
+  </body>
+</html>
